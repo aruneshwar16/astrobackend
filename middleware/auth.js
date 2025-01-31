@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-const JWT_SECRET = 'astrology_jwt_secret_key_2025';
+dotenv.config();
 
 const auth = async (req, res, next) => {
   try {
@@ -13,8 +14,8 @@ const auth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     
     try {
-      // Verify token
-      const decoded = jwt.verify(token, JWT_SECRET);
+      // Verify token using JWT_SECRET from environment variables
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       // Add user info to request
       req.user = {

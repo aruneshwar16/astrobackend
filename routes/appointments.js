@@ -9,6 +9,36 @@ router.post('/', auth, async (req, res) => {
   try {
     console.log(' Creating new appointment:', { ...req.body, userId: req.user.userId });
     
+    // Validate required fields
+    const { name, email, phone, date, time, astrologer, consultationType } = req.body;
+    if (!name || !email || !phone || !date || !time || !astrologer || !consultationType) {
+      console.log(' Missing required fields');
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.log(' Invalid email format:', email);
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Validate phone number (10 digits)
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(phone)) {
+      console.log(' Invalid phone number:', phone);
+      return res.status(400).json({ message: 'Invalid phone number format' });
+    }
+
+    // Validate date (must be future date)
+    const appointmentDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (appointmentDate < today) {
+      console.log(' Invalid date - must be future date');
+      return res.status(400).json({ message: 'Please select a future date' });
+    }
+
     const appointment = new Appointment({
       ...req.body,
       userId: req.user.userId,
@@ -17,7 +47,12 @@ router.post('/', auth, async (req, res) => {
 
     await appointment.save();
     
-    console.log(' Appointment created successfully');
+    console.log(' Appointment created successfully:', {
+      id: appointment._id,
+      name: appointment.name,
+      date: appointment.date
+    });
+
     res.status(201).json({
       message: 'Appointment booked successfully Thank you!',
       appointment
@@ -26,7 +61,7 @@ router.post('/', auth, async (req, res) => {
     console.error(' Error creating appointment:', error);
     res.status(500).json({
       message: 'Error booking appointment',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message
     });
   }
 });
@@ -34,15 +69,21 @@ router.post('/', auth, async (req, res) => {
 // Get user's appointments
 router.get('/my-appointments', auth, async (req, res) => {
   try {
+    console.log(' Fetching appointments for user:', req.user.userId);
+    
     const appointments = await Appointment.find({ userId: req.user.userId })
       .sort({ createdAt: -1 });
     
+    console.log(' Successfully fetched appointments:', {
+      count: appointments.length
+    });
+
     res.json(appointments);
   } catch (error) {
     console.error(' Error fetching appointments:', error);
     res.status(500).json({
       message: 'Error fetching appointments',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message
     });
   }
 });
@@ -71,7 +112,7 @@ router.patch('/:id', auth, async (req, res) => {
     console.error(' Error updating appointment:', error);
     res.status(500).json({
       message: 'Error updating appointment',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message
     });
   }
 });
@@ -95,7 +136,7 @@ router.delete('/:id', auth, async (req, res) => {
     console.error(' Error cancelling appointment:', error);
     res.status(500).json({
       message: 'Error cancelling appointment',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message
     });
   }
 });
